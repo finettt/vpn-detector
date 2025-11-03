@@ -125,12 +125,24 @@
                     detectBtn.disabled = true;
 
                     try {
+                        // 1. Get client's public IP
+                        const ipResponse = await fetch(
+                            "https://api.ipify.org?format=json",
+                        );
+                        if (!ipResponse.ok) {
+                            throw new Error("Could not fetch client IP.");
+                        }
+                        const ipData = await ipResponse.json();
+                        const clientIp = ipData.ip;
+
+                        // 2. Send IP and timezone to backend
                         const timezone =
                             Intl.DateTimeFormat().resolvedOptions().timeZone;
                         const response = await fetch("/api/detect", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
+                                ip: clientIp,
                                 timezone: timezone,
                                 threshold: 1.0,
                             }),

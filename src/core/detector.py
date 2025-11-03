@@ -8,45 +8,40 @@ import pytz
 from fastapi import Request
 
 
-def get_client_ip(request: Request) -> str:
-    """Get client IP address"""
-    # Check headers for proxy/load balancers
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-
-    # Fallback to direct IP
-    if request.client:
-        return request.client.host
-
-    return "unknown"
-
-
 async def get_ip_location(ip: str) -> dict:
     """Get geolocation by IP address"""
-    if (
-        ip == "unknown"
-        or ip.startswith("127.")
-        or ip.startswith("192.168.")
-        or ip.startswith("10.")
-    ):
-        return {
-            "timezone": "UTC",
-            "country": "Local",
-            "city": "Local",
-            "lat": 0,
-            "lon": 0,
-        }
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        is_local_ip = (
+            ip == "unknown"
+            or ip.startswith("127.")
+            or ip.startswith("192.168.")
+            or ip.startswith("10.")
+        )
 
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        effective_ip = ip
+        if is_local_ip:
+            try:
+                # For local IPs, fetch the public IP to allow for local testing
+                response = await client.get("https://api.ipify.org?format=json")
+                response.raise_for_status()
+                effective_ip = response.json()["ip"]
+            except Exception as e:
+                print(f"Error getting public IP from ipify: {e}")
+                # Fallback to local if ipify fails
+                return {
+                    "timezone": "UTC",
+                    "country": "Local",
+                    "city": "Local",
+                    "lat": 0,
+                    "lon": 0,
+                }
+
+        try:
+            # Get geolocation from the effective IP
             response = await client.get(
-                f"http://ip-api.com/json/{ip}?fields=status,country,city,timezone,lat,lon"
+                f"http://ip-api.com/json/{effective_ip}?fields=status,country,city,timezone,lat,lon"
             )
+            response.raise_for_status()
             data = response.json()
 
             if data.get("status") == "success":
@@ -57,8 +52,8 @@ async def get_ip_location(ip: str) -> dict:
                     "lat": data.get("lat", 0),
                     "lon": data.get("lon", 0),
                 }
-    except Exception as e:
-        print(f"Error getting geolocation: {e}")
+        except Exception as e:
+            print(f"Error getting geolocation for IP {effective_ip}: {e}")
 
     return {
         "timezone": "UTC",
