@@ -135,7 +135,3 @@ pytest
 - Uses the free ip-api.com API for geolocation (45 requests per minute limit)
 - Supports proxied requests (X-Forwarded-For, X-Real-IP)
 - Local IP addresses (127.0.0.1, 192.168.x.x, 10.x.x.x) are not checked for VPN
-
-## License
-
-MIT
