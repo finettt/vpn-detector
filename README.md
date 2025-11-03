@@ -1,4 +1,5 @@
 # VPN Detector API
+<img width="658" height="732" alt="image" src="https://github.com/user-attachments/assets/3ced9652-7a7a-42f4-bdca-0574dfc1178b" />
 
 FastAPI application for detecting VPN usage by comparing IP address geolocation with client timezone.
 
